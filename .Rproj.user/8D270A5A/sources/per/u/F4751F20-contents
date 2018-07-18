@@ -1,0 +1,7 @@
+library(googlesheets)
+
+gs_auth(new_user = TRUE)
+for_gs <- gs_key("11RcJjyf5nNYkO7EbhurNYZl8JccohGouigOJkjNh5UA")
+data <- gs_read(for_gs)
+
+names(data) <- c("date", "time", "estado", "nil") 

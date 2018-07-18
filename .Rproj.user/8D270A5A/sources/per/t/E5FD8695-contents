@@ -1,0 +1,420 @@
+## BIG ESTUDANTE
+
+library(shiny)
+library(plotly)
+#library(lubridate)
+library(googlesheets)
+
+#tabela_teste_banco <- 
+ax <- list(showline = FALSE, zeroline = FALSE, 
+           showticklabels = FALSE,showgrid = FALSE) # remove o plano cartesiano (background) dos graficos de pizza
+  
+nome_relatorio <- paste0("Relatorio",format(Sys.time(), '%d%B%Y'), ".html")
+
+shinyServer(function(input, output) {
+
+  # TRATAMENTO DAS TABELAS
+  #tabela <- read.csv(file = "Dados.csv", sep = ",", stringsAsFactors = FALSE)
+  tabela <- loadData()
+  tabela <- tabela[,-1]
+  tabela$Cidade <- trataCidade(tabela$Cidade)
+  tabela[,4] <- calculaIdade(tabela[,4])
+  
+  auxiliar <- read.csv(file = "Auxiliar.csv", sep = ",", stringsAsFactors = FALSE)
+  #destaque <- read.csv(file = "destaque.csv", sep = ",", stringsAsFactors = FALSE)
+
+  
+  # INPUTS DAS ANALISES
+  output$selecao_analises <- renderUI({
+    selectInput("analises", label = "ROTULO ANALISE", choices = auxiliar$Seletores, selected = NULL)
+  })
+  
+  output$selecao_social <- renderUI({
+    selectInput("analises_social", label = "Social", choices = auxiliar$Seletores[which(auxiliar[,5] == "Social")], selected = NULL)
+  })
+  
+  output$selecao_academico <- renderUI({
+    selectInput("analises_academico", label = "Academico", choices = auxiliar$Seletores[which(auxiliar[,5] == "Academico")], selected = NULL)
+  })
+  
+  output$selecao_cultural <- renderUI({
+    selectInput("analises_cultural", label = "Cultural", choices = auxiliar$Seletores[which(auxiliar[,5] == "Cultural")], selected = "Como ouve musicas")
+  })
+  
+  output$selecao1 <- renderUI({
+    selectInput("analises1", label = "Escolhas 1", choices = auxiliar$Seletores[which(auxiliar[,5] == input$selecao_tipos1)])
+  })
+  
+  output$selecao2 <- renderUI({
+    selectInput("analises2", label = "Escolhas 2", choices = auxiliar$Seletores[which(auxiliar[,5] == input$selecao_tipos2)])
+  })
+  
+  # GRAFICOS
+  output$grafico <- renderPlotly({
+    
+    if(input$anos_tab == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_tab)),]}
+    
+    if(auxiliar$Tipos[match(as.character(input$analises), auxiliar$Seletores)] == "Barra"){
+      valores <- tabela_aux[, match(as.character(input$analises), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      #p <- plot_ly(x = names(valores_plot), y = as.vector(valores_plot), type = "bar")
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL)
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises), auxiliar$Seletores)] == "Pizza"){
+      valores <- tabela_aux[, match(as.character(input$analises), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      p <- plot_ly(labels = names(valores_plot), values = as.vector(valores_plot), type = "pie") 
+    }
+  })
+  
+  output$grafico_social <- renderPlotly({
+    
+    if(input$anos_social == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_social)),]}
+    
+    if(input$analises_social == 'Idade'){
+      valores <- tabela_aux[, match(as.character(input$analises_social), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      
+      p <- plot_ly(x = names(valores_plot), y = as.vector(valores_plot), type = "bar", color = names(valores_plot)) %>%
+        layout(title = as.character(input$analises_social))
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_social), auxiliar$Seletores)] == "Barra"){
+      valores <- tabela_aux[, match(as.character(input$analises_social), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      #
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL) %>%
+        layout(title = as.character(input$analises_social), xaxis = list(title = ""), yaxis = list(title = "Frequencia"))
+      #
+      # <- plot_ly(x = names(valores_plot), y = as.vector(valores_plot), type = "bar")
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_social), auxiliar$Seletores)] == "Pizza"){
+      valores <- tabela_aux[, match(as.character(input$analises_social), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      p <- plot_ly(labels = names(valores_plot), values = as.vector(valores_plot), type = "pie") %>%
+        layout(title = as.character(input$analises_social), xaxis = ax, yaxis = ax)
+    }
+  })
+  
+  output$grafico_academico <- renderPlotly({
+    
+    if(input$anos_academico == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_academico)),]}
+    
+    if(auxiliar$Tipos[match(as.character(input$analises_academico), auxiliar$Seletores)] == "Barra"){
+      valores <- tabela_aux[, match(as.character(input$analises_academico), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      #
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL) %>%
+        layout(title = as.character(input$analises_academico), xaxis = ax, yaxis = ax)
+      #
+      #p <- plot_ly(x = names(valores_plot), y = as.vector(valores_plot), type = "bar")
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_academico), auxiliar$Seletores)] == "Pizza"){
+      valores <- tabela_aux[, match(as.character(input$analises_academico), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      p <- plot_ly(labels = names(valores_plot), values = as.vector(valores_plot), type = "pie") %>%
+        layout(title = as.character(input$analises_academico), xaxis = ax, yaxis = ax)
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_academico), auxiliar$Seletores)] == "Split"){
+      valores <- tabela_aux[, match(as.character(input$analises_academico), auxiliar$Seletores)]
+      
+      aux <- splitaDadosChar(valores)
+      aux <- corrigeDadosChar(aux)
+      valores_plot <- table(aux)
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL) %>%
+        layout(title = as.character(input$analises_academico), xaxis = list(title = ""), yaxis = list(title = "Frequencia"))
+    }
+  })
+  
+  output$grafico_cultural <- renderPlotly({
+    
+    if(input$anos_cultural == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_cultural)),]}
+    
+    if(auxiliar$Tipos[match(as.character(input$analises_cultural), auxiliar$Seletores)] == "Barra"){
+      valores <- tabela_aux[, match(as.character(input$analises_cultural), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      #
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL) %>%
+        layout(title = as.character(input$analises_cultural), xaxis = list(title = ""), yaxis = list(title = "Frequencia"))
+      #
+      #p <- plot_ly(x = names(valores_plot), y = as.vector(valores_plot), type = "bar")
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_cultural), auxiliar$Seletores)] == "Pizza"){
+      valores <- tabela_aux[, match(as.character(input$analises_cultural), auxiliar$Seletores)]
+      valores_plot <- table(valores)
+      p <- plot_ly(labels = names(valores_plot), values = as.vector(valores_plot), type = "pie") %>%
+        layout(title = as.character(input$analises_cultural), xaxis = ax, yaxis = ax)
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_cultural), auxiliar$Seletores)] == "Stacked1"){
+      print("entrou")
+      valores <- tabela_aux[,30:44]
+      x <- auxiliar$Seletores[30:44]
+      y_NAOCONHECE <- c()
+      y_CONHECENUNCAFOI <- c()
+      y_CONHECEUMAVEZ <- c()
+      
+      for(i in 1:length(x)){
+        aux <- length(which(valores[,i] == "Não conhece"))
+        y_NAOCONHECE <- c(y_NAOCONHECE, aux)
+        aux <- length(which(valores[,i] == "Conhece, mas nunca foi"))
+        y_CONHECENUNCAFOI <- c(y_CONHECENUNCAFOI, aux)
+        aux <- length(which(valores[,i] == "Conhece e já foi pelo menos uma vez"))
+        y_CONHECEUMAVEZ <- c(y_CONHECEUMAVEZ, aux)
+      }
+      dados <- data.frame(x, y_NAOCONHECE, y_CONHECENUNCAFOI, y_CONHECEUMAVEZ)
+      
+      p <- plot_ly(data = dados, y = ~x, x = ~y_NAOCONHECE, type = 'bar', name = 'Nao Conhece', orientation = 'h') %>%
+        add_trace(x = ~y_CONHECENUNCAFOI, name = 'Conhece mas nunca foi') %>%
+        add_trace(x = ~y_CONHECEUMAVEZ, name = 'Conhece e ja foi pelo menos uma vez') %>%
+        layout(yaxis = list(title = 'Count'), barmode = 'stack')
+    }
+    else if(auxiliar$Tipos[match(as.character(input$analises_cultural), auxiliar$Seletores)] == "Split"){
+      valores <- tabela_aux[, match(as.character(input$analises_cultural), auxiliar$Seletores)]
+      
+      aux <- splitaDadosChar(valores)
+      aux <- corrigeDadosChar(aux)
+      valores_plot <- table(aux)
+      data <- data.frame(LABEL = names(valores_plot), COUNT = as.vector(valores_plot))
+      data$LABEL <- factor(data$LABEL, levels = unique(data$LABEL)[order(data$COUNT, decreasing = FALSE)])
+      p <- plot_ly(data = data, x = ~LABEL, y = ~COUNT, type = "bar", color = ~LABEL) %>%
+        layout(title = as.character(input$analises_cultural), xaxis = list(title = ""), yaxis = list(title = "Frequencia"))
+    }
+  })
+  
+  # DADOS
+  #output$tabela_dados <- DT::renderDataTable(DT::datatable(tabela))
+  
+  # FUNCIONALIDADE TABELAS
+  output$selecao_frequencia <- renderUI({
+    selectInput("tab_freq", label = "ROTULO ANALISE", choices = auxiliar$Seletores, selected = NULL)
+  })
+  
+  x_tabela <- reactive({
+    valores <- tabela[, match(as.character(input$analises), auxiliar$Seletores)]
+    absoluta <- table(valores)
+    relativa <- absoluta / nrow(tabela)
+    x = merge(absoluta, relativa, by = 'row.names', all = TRUE)
+    x = x[,-c(1,4)]
+    names(x) = c(as.character(input$analises), "Frequencia Absoluta", "Frequencia Relativa")
+    x
+  })
+  
+  x_tabela_social <- reactive({
+    if(input$anos_social == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_social)),]}
+    
+    valores <- tabela_aux[, match(as.character(input$analises_social), auxiliar$Seletores)]
+    absoluta <- table(valores)
+    relativa <- absoluta / nrow(tabela)
+    x = merge(absoluta, relativa, by = 'row.names', all = TRUE)
+    x = x[,-c(1,4)]
+    names(x) = c(as.character(input$analises_social), "Frequencia Absoluta", "Frequencia Relativa")
+    x
+  })
+  
+  x_tabela_academico <- reactive({
+    if(input$anos_academico == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_academico)),]}
+    
+    valores <- tabela_aux[, match(as.character(input$analises_academico), auxiliar$Seletores)]
+    absoluta <- table(valores)
+    relativa <- absoluta / nrow(tabela)
+    x = merge(absoluta, relativa, by = 'row.names', all = TRUE)
+    x = x[,-c(1,4)]
+    names(x) = c(as.character(input$analises_academico), "Frequencia Absoluta", "Frequencia Relativa")
+    x
+  })
+  
+  x_tabela_cultural <- reactive({
+    if(input$anos_cultural == "Todos"){tabela_aux <- tabela}
+    else{tabela_aux <- tabela[which(tabela[,7] == as.character(input$anos_cultural)),]}
+    
+    if(auxiliar$Tipos[match(as.character(input$analises_cultural), auxiliar$Seletores)] == "Split"){
+      valores <- tabela_aux[, match(as.character(input$analises_cultural), auxiliar$Seletores)]
+      aux <- splitaDadosChar(valores)
+      aux <- corrigeDadosChar(aux)
+      absoluta <- table(aux)
+      relativa <- absoluta / nrow(tabela)
+      x = merge(absoluta, relativa, by = 'row.names', all = TRUE)
+      x = x[,-c(1,4)]
+      names(x) = c(as.character(input$analises_cultural), "Frequencia Absoluta", "Frequencia Relativa")
+      x
+    }
+    else{
+      valores <- tabela_aux[, match(as.character(input$analises_cultural), auxiliar$Seletores)]
+      absoluta <- table(valores)
+      relativa <- absoluta / nrow(tabela)
+      x = merge(absoluta, relativa, by = 'row.names', all = TRUE)
+      x = x[,-c(1,4)]
+      names(x) = c(as.character(input$analises_cultural), "Frequencia Absoluta", "Frequencia Relativa")
+      x
+    }
+  })
+  
+  observeEvent(input$cruzadaGo,{
+    tabela_aux <- tabela
+    
+    #valores1 <- tabela_aux[, match(as.character(input$analises1), auxiliar$Seletores)]
+    #valores2 <- tabela_aux[, match(as.character(input$analises2), auxiliar$Seletores)]
+    if(auxiliar$Tipos[match(as.character(input$analises1), auxiliar$Seletores)] != "Split" && 
+       auxiliar$Tipos[match(as.character(input$analises2), auxiliar$Seletores)] != "Split"){
+      
+      x <- table(tabela_aux[, match(as.character(input$analises1), auxiliar$Seletores)], 
+                 tabela_aux[, match(as.character(input$analises2), auxiliar$Seletores)])
+      aux <- as.matrix.data.frame(x)
+      colnames(aux) <- as.array(colnames(x))
+      rownames(aux) <- as.array(rownames(x))
+      print(aux)
+      print(x)
+      output$tabela_cruzada <- renderTable(aux, rownames = TRUE, bordered = TRUE)
+    }
+    #x <- as.data.frame(x)
+    #colnames(x) <- c(input$analises1, input$analises2, "Frequencia")
+  })
+  
+  #x_tabela_cruzada <- reactive({
+    #tabela_aux <- tabela
+    
+    #valores1 <- tabela_aux[, match(as.character(input$analises1), auxiliar$Seletores)]
+    #valores2 <- tabela_aux[, match(as.character(input$analises2), auxiliar$Seletores)]
+    #x <- table(tabela_aux[, match(as.character(input$analises1), auxiliar$Seletores)], 
+    #           tabela_aux[, match(as.character(input$analises2), auxiliar$Seletores)])
+    #x <- as.data.frame(x)
+    #colnames(x) <- c(input$analises1, input$analises2, "Frequencia")
+    #print(x)
+    #x
+  #})
+  
+  
+  # OUTPUT TABELAS
+  output$tabela_frequencia <- renderTable({x_tabela()})
+  output$tabela_frequencia_social <- DT::renderDataTable({x_tabela_social()}, options = list(pageLength = 5), rownames = FALSE)
+  output$tabela_frequencia_academico <- DT::renderDataTable({x_tabela_academico()}, options = list(pageLength = 5), rownames = FALSE)
+  output$tabela_frequencia_cultural <- DT::renderDataTable({x_tabela_cultural()}, options = list(pageLength = 5), rownames = FALSE)
+  #output$tabela_cruzada <- renderTable({x_tabela_cruzada()}, rownames = FALSE, colnames = TRUE, striped = TRUE)
+  
+  output$destaque_titulo <- renderText({destaque$Titulo})
+  
+  output$destaque_texto <- renderText({destaque$Descricao})
+  
+  output$linkref_texto <- renderText({
+    helpText(a(target = "_blank", "Clique aqui para saber mais...", href = "http://www.unifesp.br/campus/sjc/acontecenoict/2130-curso-de-inverno-em-bioinformatica.html"))
+  })
+  
+# Gera relatorio Markdown
+  output$report <- downloadHandler(filename = nome_relatorio, content = function(file){
+    tempReport <- file.path(tempdir(), "report.Rmd")
+    file.copy("report.Rmd", tempReport, overwrite = TRUE)
+    dados_markdown <- prepMarkdown(tabela)
+    params <- list(n = dados_markdown)
+    rmarkdown::render(tempReport, output_file = file,
+                      params = params,
+                      envir = new.env(parent = globalenv())
+    )
+  })
+  
+  observeEvent(input$menu,{
+    if(isolate(input$menu) == "relatorio_tab"){
+      showModal(modalDialog(
+        title = "Relatorio",
+        downloadButton("report", label = "Gerar relatorio"),
+        footer = modalButton("Sair")
+      ))
+    }
+  })
+})
+
+# Calcular idade
+calculaIdade <- function(nascimento){
+  nascimento <- as.Date(nascimento, format = "%d/%m/%Y")
+  nascimento <- as.POSIXlt(nascimento)
+  
+  hoje <- as.POSIXlt(Sys.Date())
+  
+  idade <- hoje$year - nascimento$year
+  
+  if(hoje$mon < nascimento$mon){
+    idade <- idade - 1
+  }
+  else if(hoje$mon == nascimento$mon){
+    if(hoje$mday < nascimento$mday){idade <- idade - 1}
+  }
+  
+  return(idade)
+}
+
+splitaDadosChar <- function(valores){
+  aux <- ""
+  aux <- valores[1]
+  for(i in 2:length(valores)){
+    aux <- paste(aux, ",", valores[i])
+  }
+  aux <- unlist(strsplit(aux, ","))
+  return(aux)
+}
+
+corrigeDadosChar <- function(dados){
+  for(i in 1:length(dados)){
+    if(substr(dados[i], 1, 1) == " "){
+      dados[i] = substr(dados[i], 2, nchar(dados[i]))
+    }
+    if(substr(dados[i], nchar(dados[i]), nchar(dados[i])) == " "){
+      dados[i] = substr(dados[i], 1, nchar(dados[i])-1)
+    }
+  }
+  return(dados)
+}
+
+# Carregar dados remotos
+loadData <- function(){
+  sheet_key <- "1PaV_9VRi81hZr2H0W00yIPAe_OemFiqS1wse1VSvELU"
+  ss <- gs_key(sheet_key)
+  ws = gs_ws_ls(ss)
+  tabela <- gs_read(ss = ss, ws = ws[1])
+  return(as.data.frame(tabela))
+}
+
+# Constroi tabela de maximos e minimos
+prepMarkdown <- function(tabela){
+
+  tabela <- tabela[,-c(1, 2, 3, 59)]
+  
+  aux <- c()
+  x <- table(tabela[,1])
+  aux <- c(as.character(names(which.max(x))), as.integer(max(x)), as.character(names(which.min(x))), as.integer(min(x)))
+  data <- data.frame(v1 = aux[1], v2 = aux[2], v3 = aux[3], v4 = aux[4], stringsAsFactors = FALSE)
+  
+  for(i in 2:length(tabela)){
+  
+      aux <- c()
+      x <- table(tabela[,i])
+      aux <- c(as.character(names(which.max(x))), as.integer(max(x)), as.character(names(which.min(x))), as.integer(min(x)))
+      data <- rbind(data, aux)
+    
+  }
+  
+  colnames(data) <- c("Valor com maior frequencia", "Freq", "Valor com menor frequencia", "Freq")
+  rownames(data) <- colnames(tabela)
+
+  return(data)
+}
+
+trataCidade <- function(cidades){
+  a <- toupper(cidades)
+  #x <- iconv(a, to='ASCII//TRANSLIT')
+  
+  return(a)
+}

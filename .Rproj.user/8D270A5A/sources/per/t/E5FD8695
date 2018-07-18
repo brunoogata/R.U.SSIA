@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1531423949265.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2269064610",
+    "id" : "E5FD8695",
+    "lastKnownWriteTime" : 1531423908,
+    "last_content_update" : 1531423908,
+    "path" : "~/Downloads/server (3).R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "381,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

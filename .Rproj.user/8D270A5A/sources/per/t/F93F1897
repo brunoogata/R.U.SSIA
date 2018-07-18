@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1530939721709.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2338885286",
+    "id" : "F93F1897",
+    "lastKnownWriteTime" : 1531494271,
+    "last_content_update" : 1531494271811,
+    "path" : "~/RUSSIA/app.R",
+    "project_path" : "app.R",
+    "properties" : {
+        "cursorPosition" : "72,37",
+        "scrollLine" : "42"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
