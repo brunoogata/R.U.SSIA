@@ -1,7 +1,6 @@
 package main
 
 import(
-//	"fmt"
 	"image"
 	"image/jpeg"
 	"os"
@@ -70,13 +69,6 @@ func CalculateMeanDistance(pixarr1 []pixel, pixarr2 []pixel, x_bound int, y_boun
 	return (deviation / float64(total_bound))
 }
 
-/*func main(){
-	
-	base, data := LoadImage()
-
-	fmt.Println(GetStateQueue(base, data))
-	fmt.Println(GetStateQueue(nil, data))
-}*/
 func SquareDiff(x, y uint32) uint64 {   
     d := uint64(x) - uint64(y)
     return d * d
